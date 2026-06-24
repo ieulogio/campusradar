@@ -1,0 +1,39 @@
+# ---------------------------------------------------------------------------
+# CampusRadar — orquestación local con Docker Compose.
+# Levanta la aplicación con un solo comando: docker compose up --build
+# ---------------------------------------------------------------------------
+services:
+  campusradar:
+    build: .
+    container_name: campusradar
+    ports:
+      - "8000:8000"
+    environment:
+      # SQLite por defecto (cero configuración). Para PostgreSQL, descomenta el
+      # servicio db de abajo y apunta DATABASE_URL hacia él.
+      - DATABASE_URL=sqlite:////data/campusradar.db
+      - SECRET_KEY=cambia-esta-clave-en-produccion
+      - SEED_ON_STARTUP=true
+    volumes:
+      # Persiste la base de datos entre reinicios del contenedor.
+      - campusradar_data:/data
+    restart: unless-stopped
+
+volumes:
+  campusradar_data:
+
+# ---------------------------------------------------------------------------
+# Opcional: PostgreSQL en lugar de SQLite.
+# Descomenta este bloque y el "depends_on" + DATABASE_URL correspondiente.
+# ---------------------------------------------------------------------------
+#  db:
+#    image: postgres:16-alpine
+#    environment:
+#      - POSTGRES_USER=campusradar
+#      - POSTGRES_PASSWORD=campusradar
+#      - POSTGRES_DB=campusradar
+#    volumes:
+#      - pg_data:/var/lib/postgresql/data
+#
+# volumes:
+#   pg_data:

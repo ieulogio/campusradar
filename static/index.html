@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CampusRadar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3349;
+    --accent: #4f8ef7; --accent2: #7c3aed; --green: #22c55e; --red: #ef4444;
+    --yellow: #f59e0b; --text: #e2e8f0; --muted: #64748b; --tag-bg: #1e2a45;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; position: sticky; top: 0; z-index: 100; }
+  .logo { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; }
+  .logo span { color: var(--accent); }
+  .radar-dot { display: inline-block; width: 8px; height: 8px; background: var(--green); border-radius: 50%; margin-right: 6px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+  .user-badge { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px 4px 8px; }
+  .avatar { width: 24px; height: 24px; background: var(--accent2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: white; font-weight: 600; }
+  .rep-badge { background: var(--accent); color: white; font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 600; }
+  .logout-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 5px 10px; font-size: 12px; cursor: pointer; }
+  .logout-btn:hover { color: var(--text); border-color: var(--red); }
+
+  .layout { display: grid; grid-template-columns: 240px 1fr 300px; min-height: calc(100vh - 56px); }
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 20px 16px; }
+  .sidebar-title { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 10px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; cursor: pointer; color: var(--muted); font-size: 14px; margin-bottom: 2px; transition: all 0.15s; }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(79,142,247,0.12); color: var(--accent); }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+  .filter-section { margin-top: 20px; }
+  .filter-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--tag-bg); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; font-size: 12px; cursor: pointer; margin: 3px 2px; transition: all 0.15s; }
+  .filter-chip:hover, .filter-chip.active { background: rgba(79,142,247,0.2); border-color: var(--accent); color: var(--accent); }
+
+  .feed { padding: 20px; overflow-y: auto; }
+  .feed-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .feed-title { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; }
+  .btn-new { background: var(--accent); color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .btn-new:hover { opacity: 0.85; }
+  .search-bar { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 14px; margin-bottom: 16px; outline: none; transition: border-color 0.15s; }
+  .search-bar:focus { border-color: var(--accent); }
+
+  .report-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; transition: all 0.15s; position: relative; overflow: hidden; }
+  .report-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+  .report-card.Nuevo::before { background: var(--accent); }
+  .report-card.Verificado::before { background: var(--green); }
+  .report-card.Controvertido::before { background: var(--yellow); }
+  .report-card.Critico::before { background: var(--red); }
+  .report-card.Expirado::before, .report-card.Archivado::before { background: var(--muted); }
+  .report-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+  .card-type { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; }
+  .card-title { font-size: 15px; font-weight: 600; }
+  .estado-badge { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
+  .estado-Nuevo { background: rgba(79,142,247,0.15); color: var(--accent); }
+  .estado-Verificado { background: rgba(34,197,94,0.15); color: var(--green); }
+  .estado-Controvertido { background: rgba(245,158,11,0.15); color: var(--yellow); }
+  .estado-Critico { background: rgba(239,68,68,0.15); color: var(--red); }
+  .estado-Expirado, .estado-Archivado { background: rgba(100,116,139,0.1); color: var(--muted); }
+  .card-desc { font-size: 13px; color: var(--muted); margin-bottom: 10px; line-height: 1.5; }
+  .card-meta { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+  .card-tags { display: flex; gap: 4px; flex-wrap: wrap; margin: 8px 0; }
+  .tag { background: var(--tag-bg); border: 1px solid var(--border); border-radius: 12px; padding: 2px 8px; font-size: 11px; color: var(--muted); cursor: pointer; }
+  .tag:hover { border-color: var(--accent); color: var(--accent); }
+  .card-actions { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .action-btn { display: flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; transition: all 0.15s; }
+  .action-btn:hover { background: var(--surface2); color: var(--text); }
+  .action-btn.confirmar:hover, .action-btn.active-confirm { background: rgba(34,197,94,0.1); border-color: var(--green); color: var(--green); }
+  .action-btn.desmentir:hover, .action-btn.active-deny { background: rgba(239,68,68,0.1); border-color: var(--red); color: var(--red); }
+  .protocolo { font-size: 11px; color: var(--muted); margin-top: 8px; font-style: italic; border-left: 2px solid var(--border); padding-left: 8px; }
+
+  .right-panel { background: var(--surface); border-left: 1px solid var(--border); padding: 20px; overflow-y: auto; }
+  .panel-section { margin-bottom: 24px; }
+  .panel-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 12px; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+  .stat-num { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .rep-bar-outer { background: var(--surface2); border-radius: 4px; height: 6px; margin: 8px 0 4px; }
+  .rep-bar-inner { background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 4px; height: 6px; transition: width 0.4s; }
+  .user-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .user-row:last-child { border-bottom: none; }
+  .user-name { font-size: 13px; flex: 1; }
+  .user-level { font-size: 11px; color: var(--muted); }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .modal-overlay.hidden { display: none; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 540px; max-height: 88vh; overflow-y: auto; padding: 24px; }
+  .modal-title { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: block; }
+  .form-input, .form-select, .form-textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-size: 14px; outline: none; font-family: inherit; transition: border-color 0.15s; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+  .form-textarea { resize: vertical; min-height: 70px; }
+  .form-select option { background: var(--surface); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-cancel { flex: 1; background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 10px; cursor: pointer; font-size: 14px; }
+  .btn-submit { flex: 2; background: var(--accent); border: none; color: white; border-radius: 8px; padding: 10px; cursor: pointer; font-size: 14px; font-weight: 600; }
+  #map-picker { height: 180px; border-radius: 8px; border: 1px solid var(--border); margin-top: 6px; }
+
+  .notif-toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; font-size: 13px; max-width: 320px; z-index: 300; transform: translateY(20px); opacity: 0; transition: all 0.3s; }
+  .notif-toast.show { transform: translateY(0); opacity: 1; }
+  .notif-toast .notif-title { font-weight: 600; margin-bottom: 2px; font-size: 12px; color: var(--accent); }
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+  .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .ubicacion-info { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+  #map-full { height: calc(100vh - 160px); border-radius: 12px; border: 1px solid var(--border); }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--surface); color: var(--text); }
+
+  /* NOTIF DROPDOWN */
+  #notif-panel { position: absolute; top: 64px; right: 70px; width: 320px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; z-index: 150; max-height: 360px; overflow-y: auto; }
+  #notif-panel.hidden { display: none; }
+  .notif-item { font-size: 12px; padding: 8px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .notif-item.unread { background: rgba(79,142,247,0.06); }
+
+  /* AUTH SCREEN */
+  #auth-screen { position: fixed; inset: 0; background: var(--bg); z-index: 500; display: flex; align-items: center; justify-content: center; }
+  #auth-screen.hidden { display: none; }
+  .auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 380px; }
+  .auth-logo { font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; text-align: center; margin-bottom: 4px; }
+  .auth-sub { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+  .auth-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .auth-tab { flex: 1; text-align: center; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--muted); border: 1px solid var(--border); }
+  .auth-tab.active { background: rgba(79,142,247,0.12); color: var(--accent); border-color: var(--accent); }
+  .auth-error { color: var(--red); font-size: 12px; margin-top: 8px; min-height: 16px; }
+  .auth-hint { font-size: 11px; color: var(--muted); text-align: center; margin-top: 16px; line-height: 1.6; }
+
+  @media (max-width: 1100px) { .layout { grid-template-columns: 200px 1fr; } .right-panel { display: none; } }
+  @media (max-width: 700px) { .layout { grid-template-columns: 1fr; } .sidebar { display: none; } }
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo"><span class="radar-dot"></span>Campus<span style="color:var(--accent)">Radar</span></div>
+    <div class="auth-sub">Información del campus en tiempo real</div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-login" onclick="setAuthTab('login')">Ingresar</div>
+      <div class="auth-tab" id="tab-register" onclick="setAuthTab('register')">Registrarse</div>
+    </div>
+    <div id="register-fields" style="display:none;">
+      <div class="form-group"><label class="form-label">Nombre</label><input class="form-input" id="a-nombre"></div>
+      <div class="form-group"><label class="form-label">Apellido</label><input class="form-input" id="a-apellido"></div>
+      <div class="form-group"><label class="form-label">Carrera</label><input class="form-input" id="a-carrera" placeholder="Ej: Eléctrica"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="a-email" placeholder="tu@uchile.cl"></div>
+    <div class="form-group"><label class="form-label">Contraseña</label><input class="form-input" id="a-password" type="password"></div>
+    <button class="btn-submit" style="width:100%;" onclick="submitAuth()" id="auth-submit">Ingresar</button>
+    <div class="auth-error" id="auth-error"></div>
+    <div class="auth-hint">Cuentas demo (contraseña <b>demo1234</b>):<br>javita@uchile.cl · maria@uchile.cl · mod@uchile.cl</div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo"><span class="radar-dot"></span>Campus<span>Radar</span></div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <div id="notif-bell" style="font-size:18px;cursor:pointer;position:relative;" onclick="toggleNotifs()">
+      🔔 <span id="notif-count" style="position:absolute;top:-4px;right:-6px;background:var(--red);color:white;font-size:9px;width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;">0</span>
+    </div>
+    <div class="user-badge">
+      <div class="avatar" id="my-avatar">··</div>
+      <span id="my-name">—</span> <span class="rep-badge" id="my-rep">REP: 0</span>
+    </div>
+    <button class="logout-btn" onclick="logout()">Salir</button>
+  </div>
+</div>
+
+<div id="notif-panel" class="hidden"></div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-title">Navegación</div>
+    <div class="nav-item active" data-view="feed" onclick="setView('feed')"><span class="nav-icon">📡</span> Feed en Vivo</div>
+    <div class="nav-item" data-view="mis" onclick="setView('mis')"><span class="nav-icon">📋</span> Mis Reportes</div>
+    <div class="nav-item" data-view="mapa" onclick="setView('mapa')"><span class="nav-icon">🗺️</span> Mapa</div>
+    <div class="nav-item" data-view="usuarios" onclick="setView('usuarios')"><span class="nav-icon">👥</span> Comunidad</div>
+    <div class="nav-item" id="nav-moderacion" data-view="moderacion" style="display:none;" onclick="setView('moderacion')"><span class="nav-icon">🛡️</span> Moderación</div>
+
+    <div class="filter-section">
+      <div class="sidebar-title" style="margin-top:8px;">Filtrar por tipo</div>
+      <div id="type-filters">
+        <span class="filter-chip active" onclick="filterType(this,'')">🔍 Todos</span>
+        <span class="filter-chip" onclick="filterType(this,'Emergencia')">🚨 Emergencia</span>
+        <span class="filter-chip" onclick="filterType(this,'Infraestructura')">🏗️ Infraestructura</span>
+        <span class="filter-chip" onclick="filterType(this,'Evento')">🎉 Evento</span>
+        <span class="filter-chip" onclick="filterType(this,'Logistica')">🍕 Logística</span>
+        <span class="filter-chip" onclick="filterType(this,'Actividad')">⚡ Actividad</span>
+      </div>
+    </div>
+    <div class="filter-section">
+      <div class="sidebar-title" style="margin-top:8px;">Filtrar por estado</div>
+      <div id="state-filters">
+        <span class="filter-chip active" onclick="filterState(this,'')">Todos</span>
+        <span class="filter-chip" onclick="filterState(this,'Nuevo')">Nuevo</span>
+        <span class="filter-chip" onclick="filterState(this,'Verificado')">Verificado</span>
+        <span class="filter-chip" onclick="filterState(this,'Controvertido')">Controvertido</span>
+        <span class="filter-chip" onclick="filterState(this,'Critico')">Crítico</span>
+      </div>
+    </div>
+    <div class="filter-section">
+      <div class="sidebar-title" style="margin-top:8px;">Ordenar</div>
+      <select class="form-select" id="orden-select" onchange="setOrden(this.value)" style="font-size:12px;padding:6px;">
+        <option value="relevancia">Por relevancia</option>
+        <option value="reciente">Más recientes</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="feed">
+    <div class="feed-header">
+      <div>
+        <div class="feed-title">Feed del Campus</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Universidad de Chile – Beauchef</div>
+      </div>
+      <button class="btn-new" onclick="openModal()">＋ Nuevo Reporte</button>
+    </div>
+    <input class="search-bar" placeholder="🔍  Buscar por título, descripción o tag..." oninput="searchReports(this.value)" id="search-input">
+    <div id="feed-content"></div>
+    <div id="map-full" style="display:none;"></div>
+    <div id="moderacion-content" style="display:none;"></div>
+  </div>
+
+  <div class="right-panel">
+    <div class="panel-section">
+      <div class="panel-title">Estadísticas en vivo</div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Reportes activos</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-verified">0</div><div class="stat-label">Verificados</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-critical">0</div><div class="stat-label">Críticos</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-users">0</div><div class="stat-label">Usuarios</div></div>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-title">Mi reputación</div>
+      <div style="font-size:13px;"><span id="my-name-2">—</span> <span id="my-level-badge" style="font-size:11px;color:var(--muted);">– Básico</span></div>
+      <div class="rep-bar-outer"><div class="rep-bar-inner" id="rep-bar" style="width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);">
+        <span>0</span><span>Confiable: 20</span><span>Verificado: 100</span>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-title">Comunidad</div>
+      <div class="user-list" id="user-list-panel"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUEVO REPORTE -->
+<div class="modal-overlay hidden" id="modal">
+  <div class="modal">
+    <div class="modal-title">📍 Crear nuevo reporte</div>
+    <div class="form-group"><label class="form-label">Título *</label><input class="form-input" id="f-titulo" placeholder="Ej: Microondas roto en Hall Sur" /></div>
+    <div class="form-group"><label class="form-label">Descripción *</label><textarea class="form-textarea" id="f-desc" placeholder="Describe lo que está ocurriendo..."></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Tipo de reporte *</label>
+        <select class="form-select" id="f-tipo">
+          <option value="Infraestructura">🏗️ Infraestructura</option>
+          <option value="Emergencia">🚨 Emergencia</option>
+          <option value="Evento">🎉 Evento</option>
+          <option value="Logistica">🍕 Logística</option>
+          <option value="Actividad">⚡ Actividad</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Edificio *</label>
+        <select class="form-select" id="f-edificio" onchange="moveMarkerToBuilding()">
+          <option>Hall Sur</option><option>Biblioteca</option><option>Edificio Civil</option>
+          <option>Casino Central</option><option>Edificio Electrica</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Piso</label>
+        <select class="form-select" id="f-piso">
+          <option value="0">Planta baja</option><option value="1">Piso 1</option>
+          <option value="2">Piso 2</option><option value="3">Piso 3</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Tags (separados por coma)</label><input class="form-input" id="f-tags" placeholder="ej: comida, urgente, wifi" /></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ubicación en el mapa (arrastra el marcador) *</label>
+      <div id="map-picker"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-submit" onclick="submitReport()">Publicar reporte</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COMENTARIOS -->
+<div class="modal-overlay hidden" id="modal-coment">
+  <div class="modal">
+    <div class="modal-title">💬 Comentarios</div>
+    <div id="coment-list" style="margin-bottom:14px;max-height:300px;overflow-y:auto;"></div>
+    <div class="form-group"><textarea class="form-textarea" id="coment-input" placeholder="Escribe un comentario..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeComent()">Cerrar</button>
+      <button class="btn-submit" onclick="submitComent()">Comentar</button>
+    </div>
+  </div>
+</div>
+
+<div class="notif-toast" id="toast">
+  <div class="notif-title" id="toast-title">Notificación</div>
+  <div id="toast-body"></div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
