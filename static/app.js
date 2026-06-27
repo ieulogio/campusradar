@@ -23,13 +23,13 @@ const state = {
 
 // Coordenadas aproximadas de cada edificio del campus Beauchef.
 const EDIFICIOS = {
-  "Hall Sur": [-33.45820, -70.66220],
-  "Biblioteca": [-33.45835, -70.66310],
-  "Edificio Civil": [-33.45680, -70.66260],
-  "Casino Central": [-33.45793, -70.66270],
-  "Edificio Electrica": [-33.45710, -70.66175],
+  "Hall Sur":           [-33.458069, -70.663432],
+  "Biblioteca":         [-33.457467, -70.663448],
+  "Edificio Civil":     [-33.457325, -70.661887],
+  "Casino Central":     [-33.456716, -70.663708],
+  "Edificio Electrica": [-33.458047, -70.661970],
 };
-const CAMPUS_CENTRO = [-33.45750, -70.66250];
+const CAMPUS_CENTRO = [-33.457678, -70.662365];
 
 // Etiqueta legible para cada estado interno (el backend usa "Critico" sin tilde).
 const ESTADO_LABEL = {
