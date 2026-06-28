@@ -329,6 +329,7 @@ function setView(vista) {
   } else if (vista === "mapa") {
     mapa.style.display = "block";
     cargarFeed();          // recarga y dibuja el mapa
+    setTimeout(() => { if (fullMap) fullMap.invalidateSize(); }, 300);
   } else if (vista === "usuarios") {
     feed.style.display = "block";
     renderComunidadFeed();
