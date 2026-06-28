@@ -375,7 +375,7 @@ const m = L.circleMarker(
     );
   });
   // El contenedor estaba oculto al crearse: recalcular dimensiones.
-  setTimeout(() => fullMap.invalidateSize(), 50);
+  setTimeout(() => fullMap.invalidateSize(), 300);
 }
 
 /* ============================ COMUNIDAD =============================== */
