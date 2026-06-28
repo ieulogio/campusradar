@@ -28,8 +28,6 @@ const EDIFICIOS = {
   "Edificio Civil":     [-33.457325, -70.661887],
   "Casino Central":     [-33.456716, -70.663708],
   "Edificio Electrica": [-33.458047, -70.661970],
-  "Torre Central":      [-33.457678, -70.662365],
-  "Edificio Fisica":    [-33.457347, -70.662732],
 };
 
 // Etiqueta legible para cada estado interno (el backend usa "Critico" sin tilde).
