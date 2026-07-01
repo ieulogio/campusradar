@@ -344,7 +344,7 @@ function setView(vista) {
 function renderMapaCompleto() {
   if (!fullMap) {
     fullMap = L.map("map-full").setView(CAMPUS_CENTRO, 17);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    L.tileLayer("https://.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "© OpenStreetMap", maxZoom: 19,
     }).addTo(fullMap);
   }
